@@ -73,7 +73,7 @@ sigmoid_deriv_list([O|Os], [D|Ds]) :-
 % net(InN, HN, OnN, Wih, Who, Bh, Bo, LR)
 
 % ---------- deterministic init (no random) ----------
-init_net(InN, HN, ON, LR, SeedIgnored, net(InN,HN,ON,Wih,Who,Bh,Bo,LR)) :-
+init_net(InN, HN, ON, LR, _SeedIgnored, net(InN,HN,ON,Wih,Who,Bh,Bo,LR)) :-
     % for portability we use small fixed weights based on sizes
     make_vector(HN, 0.2, Bh),
     make_vector(ON, 0.1, Bo),
@@ -92,7 +92,7 @@ make_matrix(R, C, Val, [Row|Rows]) :-
 
 % ---------- forward pass ----------
 % forward(+Net, +X, -HiddenOut, -OutputOut, -State)
-forward(net(_,HN,ON,Wih,Who,Bh,Bo,_LR), X, Hout, Yout, state(X, Zin, Hout, Yin, Yout)) :-
+forward(net(_InN,_HN,_ON,Wih,Who,Bh,Bo,_LR), X, Hout, Yout, state(X, Zin, Hout, Yin, Yout)) :-
     % Zin = Wih * X + Bh
     mult_matrix_vector(Wih, X, ZinTemp),
     vec_add(ZinTemp, Bh, Zin),
@@ -170,9 +170,11 @@ train_epoch(Net0, [(X,T)|Rest], NetOut) :-
 % ---------- testing helper ----------
 test_net(Net, Data) :-
     forall(member((X,T), Data),
-           ( forward(Net, X, _H, Yout, _S),
-             format('Input: ~w  Target: ~w  Output: ~6f~n', [X, T, Yout])
-           )).
+            ( forward(Net, X, _H, Yout, _S),
+              write('Input: '), write(X),
+              write('  Target: '), write(T),
+              write('  Output: '), write(Yout), nl
+            )).
 
 % ---------- example XOR run ----------
 example_xor :-
@@ -181,6 +183,6 @@ example_xor :-
              ([1.0,0.0],[1.0]),
              ([1.0,1.0],[0.0]) ],
     init_net(2,2,1,0.5,42,Net0),
-    train_epochs(Net0, [( [0.0,0.0],[0.0] ), ([0.0,1.0],[1.0]), ([1.0,0.0],[1.0]), ([1.0,1.0],[0.0])], 2000, NetTrained),
-    writeln('Training finished. Testing:'),
+    train_epochs(Net0, Data, 2000, NetTrained),
+    write('Training finished. Testing:'), nl,
     test_net(NetTrained, Data).
