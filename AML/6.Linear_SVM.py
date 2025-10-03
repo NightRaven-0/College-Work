@@ -1,53 +1,76 @@
-#23BAI1101 LSVM
-import pandas as pd
-from sklearn.preprocessing import StandardScaler
-from sklearn.svm import LinearSVC
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
-import pickle
-import os
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.svm import LinearSVC 
+from sklearn.datasets import load_digits
+from sklearn.metrics import accuracy_score, classification_report
 
-print("Step 1: Loading pre-split and pre-scaled datasets...")
-# Set the base directory for the R drive
-base_dir = "R:\\VS CODE\\Dataset"
+# --- 1. Load and Prepare Real-World Data ---
+def load_and_prepare_data(test_size=0.3, random_state=42):
+    print("Loading Digits dataset and preparing for Linear SVM Classifier...")
+    
+    # Load the real-world dataset (automatically downloaded/cached by scikit-learn)
+    data = load_digits()
+    X = data.data
+    y = data.target
+    # Target names are just the string representations of 0 through 9
+    target_names = [str(i) for i in data.target_names] 
 
-# Load the four pre-split and pre-scaled data files
-X_train_scaled = pd.read_csv(os.path.join("R:\VS CODE\Dataset\X_train_scaled_linear.csv"))
-X_test_scaled = pd.read_csv(os.path.join(base_dir, "X_test_scaled_linear.csv"))
-y_train = pd.read_csv(os.path.join(base_dir, "y_train_linear.csv")).squeeze()
-y_test = pd.read_csv(os.path.join(base_dir, "y_test_linear.csv")).squeeze()
+    # Split the data, ensuring the classes are distributed proportionally (stratify=y)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=42, stratify=y
+    )
+    
+    print(f"Total samples: {len(X)}")
+    print(f"Features (Dimension): {X.shape[1]} (8x8 pixel values)")
+    print(f"Target Classes: {len(target_names)}")
+    print(f"Training samples: {len(X_train)}")
+    print(f"Testing samples: {len(X_test)}")
+    print("-" * 50)
+    
+    return X_train, X_test, y_train, y_test, target_names, X 
 
-print("\nStep 2: Training a Linear SVM model...")
-# Train a Linear SVM model
-model = LinearSVC(C=1.0, class_weight="balanced", dual=False)
-model.fit(X_train_scaled, y_train)
+# --- 2. Initialize and Train the Linear Support Vector Machine (LinearSVC) ---
+def train_linear_svm(X_train, y_train, random_state=42):
+    print(f"Training Linear Support Vector Machine (LinearSVC)...")
+    model = LinearSVC(random_state=random_state, dual=False, max_iter=20000) 
+    model.fit(X_train, y_train)
+    print("Training complete.")
+    return model
 
-# Predictions
-y_pred = model.predict(X_test_scaled)
+# --- 3. Predict, Evaluate, and Demonstrate ---
+def evaluate_and_predict(model, X_test, y_test, target_names, X_full):
+    # Make predictions on the test set
+    y_pred = model.predict(X_test)
+    
+    # Calculate accuracy
+    accuracy = accuracy_score(y_test, y_pred)
+    print("-" * 50)
+    print("Model Evaluation (Linear Support Vector Machine / LinearSVC):")
+    print(f"Accuracy Score on Test Data: {accuracy:.4f}")
+    
+    # Detailed classification report
+    print("\nClassification Report:")
+    print(classification_report(y_test, y_pred, target_names=target_names))
+    print("-" * 50)
 
-print("\nStep 3: Evaluating model performance...")
-# Evaluation
-print("Accuracy:", accuracy_score(y_test, y_pred))
-print("\nConfusion Matrix:\n", confusion_matrix(y_test, y_pred))
-print("\nClassification Report:\n", classification_report(y_test, y_pred))
+    new_sample_base = np.mean(X_full, axis=0) 
+    # Perturb the values slightly for a new data point
+    new_sample = (new_sample_base * 1.05).reshape(1, -1) 
+    
+    predicted_class_code = model.predict(new_sample)[0]
+    predicted_class_name = target_names[predicted_class_code]
+    
+    print("Example Prediction (Digit Classification):")
+    print(f"Input Features (First 8 pixels): {new_sample[0][:8]}") 
+    print(f"Predicted Class (Code {predicted_class_code}): {predicted_class_name}")
 
-print("\nStep 4: Saving model and feature list...")
-# Get the scaler from the pre-scaling step (if you saved it) or re-create it
-# If you didn't save the scaler, you'll need to re-fit it to save it
-scaler = StandardScaler()
-scaler.fit(pd.read_csv(os.path.join(base_dir, "X_train_linear.csv")))
-
-# Save the model with a new name
-with open(os.path.join(base_dir, "linearmodel_SVM.pkl"), "wb") as f:
-    pickle.dump(model, f)
-
-# Save the scaler with a new name
-with open(os.path.join(base_dir, "linearscaler_SVM.pkl"), "wb") as f:
-    pickle.dump(scaler, f)
-
-# Save the feature list with a new name
-with open(os.path.join(base_dir, "linearfeature_list_SVM.txt"), "w") as f:
-    for col in X_train_scaled.columns:
-        f.write(f"{col}\n")
-
-print("\nLinear SVM model, scaler, and feature list saved in the Dataset folder.")
-print("Training complete.")
+# --- Main Execution ---
+if __name__ == '__main__':
+    # Step 1: Load and Split Data
+    X_train, X_test, y_train, y_test, target_names, X_full = load_and_prepare_data()
+    
+    # Step 2: Train Model
+    svm_model = train_linear_svm(X_train, y_train) 
+    
+    # Step 3: Evaluate and Predict
+    evaluate_and_predict(svm_model, X_test, y_test, target_names, X_full)

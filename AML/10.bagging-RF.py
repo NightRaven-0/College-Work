@@ -16,7 +16,6 @@ X, y = make_classification(
 # Base model: Random Forest
 rf = RandomForestClassifier(n_estimators=50, random_state=42)
 
-# Bagging with Random Forest (use 'estimator' for new sklearn versions)
 bagging_clf = BaggingClassifier(
     estimator=rf,
     n_estimators=10,
